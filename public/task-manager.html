@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        select, input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #date {
+            background-color: #e9ecef;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #28a745;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .fetch-button {
+            background-color: #007bff;
+        }
+        .fetch-button:hover {
+            background-color: #0056b3;
+        }
+        #taskList {
+            margin-top: 20px;
+            width: 300px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #f8f9fa;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Task Submission Form -->
+    <div class="form-container">
+        <h2>Submit Task</h2>
+        <form id="taskForm">
+            <label for="name">Name:</label>
+            <select id="name" required>
+                <option value="">Select Name</option>
+                <option value="Alice">Alice</option>
+                <option value="Bob">Bob</option>
+                <option value="Charlie">Charlie</option>
+                <option value="David">David</option>
+                <option value="Emma">Emma</option>
+                <option value="Frank">Frank</option>
+                <option value="Grace">Grace</option>
+            </select>
+
+            <label for="date">Date:</label>
+            <input type="date" id="date" readonly required>
+
+            <label for="task">Task:</label>
+            <input type="text" id="task" placeholder="Enter your task" required>
+
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+    <!-- Fetch Tasks Form -->
+    <div class="form-container">
+        <h2>Fetch User Tasks</h2>
+        <form id="fetchForm">
+            <label for="fetchName">Select User:</label>
+            <select id="fetchName" required>
+                <option value="">Select Name</option>
+                <option value="Alice">Alice</option>
+                <option value="Bob">Bob</option>
+                <option value="Charlie">Charlie</option>
+                <option value="David">David</option>
+                <option value="Emma">Emma</option>
+                <option value="Frank">Frank</option>
+                <option value="Grace">Grace</option>
+            </select>
+
+            <button type="button" id="fetchTasks">Fetch Tasks</button>
+        </form>
+    </div>
+
+    <!-- Display Tasks -->
+    <div id="taskList" style="display: none;">
+        <h3>Tasks</h3>
+        <ul id="tasks"></ul>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let today = new Date().toISOString().split('T')[0];
+            document.getElementById("date").value = today;
+
+            // Submit Task Form
+            document.getElementById("taskForm").addEventListener("submit", function (event) {
+                event.preventDefault();
+
+                let name = document.getElementById("name").value;
+                let date = document.getElementById("date").value;
+                let task = document.getElementById("task").value.trim();
+
+                if (name === "" || task === "") {
+                    alert("Please fill out all fields.");
+                    return;
+                }
+
+                let taskData = { name, date, task };
+
+                let firebaseUrl = `https://dsad-5c498-default-rtdb.firebaseio.com/tasks/${name}.json`;
+
+                fetch(firebaseUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(taskData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert("Task Submitted Successfully!");
+                    document.getElementById("taskForm").reset();
+                    document.getElementById("date").value = today;
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("Error submitting task. Try again.");
+                });
+            });
+
+            // Fetch Tasks for Selected User
+            document.getElementById("fetchTasks").addEventListener("click", function () {
+                let selectedUser = document.getElementById("fetchName").value;
+
+                if (!selectedUser) {
+                    alert("Please select a user.");
+                    return;
+                }
+
+                let firebaseUrl = `https://dsad-5c498-default-rtdb.firebaseio.com/tasks/${selectedUser}.json`;
+
+                fetch(firebaseUrl)
+                .then(response => response.json())
+                .then(data => {
+                    let tasksList = document.getElementById("tasks");
+                    tasksList.innerHTML = "";
+
+                    if (data) {
+                        Object.keys(data).forEach(taskId => {
+                            let taskEntry = data[taskId];
+                            let listItem = document.createElement("li");
+                            listItem.innerHTML = `<strong>${taskEntry.date}</strong>: ${taskEntry.task}`;
+                            tasksList.appendChild(listItem);
+                        });
+
+                        document.getElementById("taskList").style.display = "block";
+                    } else {
+                        alert("No tasks found for this user.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("Error fetching tasks.");
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
